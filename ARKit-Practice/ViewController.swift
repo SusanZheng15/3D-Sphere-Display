@@ -13,21 +13,29 @@ import ARKit
 class ViewController: UIViewController, ARSCNViewDelegate {
 
     @IBOutlet var sceneView: ARSCNView!
-    
+ 
     override func viewDidLoad() {
         super.viewDidLoad()
         
         // Set the view's delegate
         sceneView.delegate = self
+      
+        let text = SCNText(string: "OG was here", extrusionDepth: 1)
         
-        // Show statistics such as fps and timing information
-        sceneView.showsStatistics = true
+        let material = SCNMaterial()
         
-        // Create a new scene
-        let scene = SCNScene(named: "art.scnassets/ship.scn")!
+        material.diffuse.contents = UIColor.green
         
-        // Set the scene to the view
-        sceneView.scene = scene
+        text.materials = [material]
+        
+        let node = SCNNode()
+        
+        node.position = SCNVector3(0, 0, 0)
+        node.scale = SCNVector3(0.01, 0.01, 0.01)
+        node.geometry = text
+        
+        sceneView.scene.rootNode.addChildNode(node)
+        sceneView.autoenablesDefaultLighting = true
     }
     
     override func viewWillAppear(_ animated: Bool) {
@@ -40,16 +48,32 @@ class ViewController: UIViewController, ARSCNViewDelegate {
         sceneView.session.run(configuration)
     }
     
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+        guard let touch = touches.first else { return }
+        let results = sceneView.hitTest(touch.location(in: sceneView), types: [ARHitTestResult.ResultType.featurePoint])
+        guard let hitFeature = results.last else { return }
+        let hitTransform = SCNMatrix4(hitFeature.worldTransform)
+        let hitPosition = SCNVector3Make(hitTransform.m41,
+                                         hitTransform.m42,
+                                         hitTransform.m43)
+        createBall(hitPosition: hitPosition)
+        
+    }
+    
+    
+    func createBall(hitPosition : SCNVector3) {
+        let newBall = SCNSphere(radius: 0.01)
+        let newBallNode = SCNNode(geometry: newBall)
+        newBallNode.position = hitPosition
+        self.sceneView.scene.rootNode.addChildNode(newBallNode)
+    }
+    
+    
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
         
         // Pause the view's session
         sceneView.session.pause()
-    }
-    
-    override func didReceiveMemoryWarning() {
-        super.didReceiveMemoryWarning()
-        // Release any cached data, images, etc that aren't in use.
     }
 
     // MARK: - ARSCNViewDelegate
